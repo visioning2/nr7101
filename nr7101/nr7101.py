@@ -198,6 +198,7 @@ class NR7101:
             ("wifi_easy_mesh", "wifi_mesh"),
             ("one_connect", "one_connect"),
             ("status", "device"),
+            ("cellwan_sms", "sms"),
         ]
 
         while retries > 0:
