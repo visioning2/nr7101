@@ -192,11 +192,11 @@ class NR7101:
         endpoints_to_try = [
             ("cellwan_status", "cellular"),
             ("Traffic_Status", "traffic"),
-            ("cardpage_status", "cardpage"),
+            #("cardpage_status", "cardpage"),
             ("lan", "lan"),
             ("lanhosts", "lanhosts"),
-            ("wifi_easy_mesh", "wifi_mesh"),
-            ("one_connect", "one_connect"),
+            #("wifi_easy_mesh", "wifi_mesh"),
+            #("one_connect", "one_connect"),
             ("status", "device"),
             ("cellwan_sms", "sms"),
         ]
@@ -253,7 +253,8 @@ class NR7101:
             "status",
             "paren_ctl",
             "wlan_status",
-            "eth_status"
+            "eth_status",
+            "cellwan_sms"
         ]
 
         available_endpoints = []
