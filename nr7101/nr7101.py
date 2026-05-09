@@ -283,7 +283,7 @@ class NR7101:
             else:
                 j = r.json()
 
-            logger.debug(f"oid= {oid} - Dict: {j}")
+            logger.warning(f"oid= {oid} - Dict: {j}")
             
             if j.get("result") != "ZCFG_SUCCESS" or not j.get("Object"):
                 return None
