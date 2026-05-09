@@ -283,7 +283,8 @@ class NR7101:
             else:
                 j = r.json()
 
-            logger.warning(f"oid= {oid} - Dict: {j}")
+            if oid == "cellwan_sms":
+                logger.warning(f"oid= {oid} - Dict: {j}")
             
             if j.get("result") != "ZCFG_SUCCESS" or not j.get("Object"):
                 return None
