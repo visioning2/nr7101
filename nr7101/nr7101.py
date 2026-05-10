@@ -11,6 +11,8 @@ from Crypto.PublicKey import RSA
 import requests
 import urllib3
 
+from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
@@ -187,6 +189,73 @@ class NR7101:
                 for iface, iface_st in zip(obj["ipIface"], obj["ipIfaceSt"]):
                     ret[iface["X_ZYXEL_IfName"]] = iface_st
             return ret
+           
+        def parse_sms_object(obj):
+            def decode_gsm_7bit(hex_str):
+                try:
+                    byte_data = bytes.fromhex(hex_str)
+                except ValueError:
+                    return hex_str  # Return the original string if it's not valid hex
+                res, bit_buf, bit_count = "", 0, 0
+                for b in byte_data:
+                    bit_buf |= b << bit_count
+                    bit_count += 8
+                    while bit_count >= 7:
+                        res += chr(bit_buf & 0x7F)
+                        bit_buf >>= 7
+                        bit_count -= 7
+                return res
+            
+            def decode_ucs2(data):
+                #Converts UCS-2 (UTF-16) encoded bytes or hex strings into text.
+                # If the input is a hex string, convert it to bytes first
+                if isinstance(data, str):
+                    try:
+                        data = bytes.fromhex(data)
+                    except ValueError:
+                        return "Error: Invalid hex string."
+                try:
+                    # 'utf-16-be' is the standard for most UCS-2 network/SMS transmissions
+                    return data.decode('utf-16-be')
+                except UnicodeDecodeError:
+                    # Fallback to Little Endian if Big Endian fails
+                    return data
+                
+            def process_sms_list(sms_data):
+                #create a dictionary to hold the concatenated messages based on MsgID or MsgIndex
+                rdict = {}
+                def process_sms_content(data):
+                    if isinstance(data, dict):
+                        msgid = (str(data.get("MsgID")) if data.get("MsgID")>0 else "0." + str(data.get("MsgIndex")))
+                        msgtxt = ""   
+                        if data.get("MsgSegmentSequence",0) <= 1:
+                            msgtxt = decode_gsm_7bit(data.get("From")) + "\nTime:" + data.get("TimeStamp") + "\n"
+                        msgtxt += (decode_ucs2(data.get("Content")) if data.get("CharacterSet")==2 else decode_gsm_7bit(data.get("Content")) )
+                        return msgid, msgtxt
+                    else:
+                        return None, None
+                rdict = {}
+                if isinstance(sms_data,list):
+                    for item in sms_data:
+                        (msgid, msgtxt) = process_sms_content(item)
+                        if msgid is not None:
+                            if msgid in rdict:
+                                rdict[msgid] += msgtxt
+                            else:
+                                rdict[msgid] = msgtxt
+                return rdict
+
+            sms_dict = {}
+            if obj and "SMS_Inbox" in obj:
+                sms_dict = process_sms_list(obj["SMS_Inbox"])
+            
+                n = 0
+                for msgtext in reversed(sms_dict.values()):
+                    obj["SMS_Text_"+str(n)] = msgtext
+                    n += 1
+                    if n >= 10:  # Limit to the 10 most recent messages
+                        break
+            return obj
 
         # Define endpoint priorities based on router type
         endpoints_to_try = [
@@ -212,6 +281,10 @@ class NR7101:
                             # Special handling for traffic data
                             traffic_obj = self.get_json_object(endpoint)
                             data = parse_traffic_object(traffic_obj)
+                        elif endpoint == "cellwan_sms":
+                            # Special handling for sms data
+                            sms_obj = self.get_json_object(endpoint)
+                            data = parse_sms_object(sms_obj)
                         else:
                             data = self.get_json_object(endpoint)
 
