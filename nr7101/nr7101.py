@@ -251,7 +251,7 @@ class NR7101:
             
                 n = 0
                 for msgtext in reversed(sms_dict.values()):
-                    obj["SMS_Text_"+str(n)] = msgtext
+                    obj["SMS_Text_"+str(n)] = msgtext[:254]  # Limit each message to 254 characters
                     n += 1
                     if n >= 10:  # Limit to the 10 most recent messages
                         break
