@@ -249,7 +249,7 @@ class NR7101:
                 sms_dict = process_sms_list(obj["SMS_Inbox"])
             
                 n = 0
-                for msgtext in reversed(sms_dict.values()):
+                for msg_sms in reversed(sms_dict.values()):
                     obj["SMS_"+str(n)+"_From"] = msg_sms[1]
                     obj["SMS_"+str(n)+"_Time"] = msg_sms[2]
                     obj["SMS_"+str(n)+"_Text"] = msg_sms[0][:254]  # Limit each message to 254 characters
