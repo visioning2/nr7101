@@ -227,22 +227,21 @@ class NR7101:
                 def process_sms_content(data):
                     if isinstance(data, dict):
                         msgid = (str(data.get("MsgID")) if data.get("MsgID")>0 else "0." + str(data.get("MsgIndex")))
-                        msgtxt = ""   
-                        if data.get("MsgSegmentSequence",0) <= 1:
-                            msgtxt = decode_gsm_7bit(data.get("From")) + "\nTime:" + data.get("TimeStamp") + "\n"
-                        msgtxt += (decode_ucs2(data.get("Content")) if data.get("CharacterSet")==2 else decode_gsm_7bit(data.get("Content")) )
-                        return msgid, msgtxt
+                        msgfrom = decode_gsm_7bit(data.get("From"))
+                        msgtime = data.get("TimeStamp")
+                        msgtxt = (decode_ucs2(data.get("Content")) if data.get("CharacterSet")==2 else decode_gsm_7bit(data.get("Content")) )
+                        return msgid, msgtxt, msgfrom, msgtime
                     else:
                         return None, None
                 rdict = {}
                 if isinstance(sms_data,list):
                     for item in sms_data:
-                        (msgid, msgtxt) = process_sms_content(item)
+                        (msgid, msgtxt, msgfrom, msgtime) = process_sms_content(item)
                         if msgid is not None:
                             if msgid in rdict:
-                                rdict[msgid] += msgtxt
+                                rdict[msgid][0] += msgtxt
                             else:
-                                rdict[msgid] = msgtxt
+                                rdict[msgid] = [msgtxt, msgfrom, msgtime]  # Store message text, sender, and timestamp together
                 return rdict
 
             sms_dict = {}
@@ -251,7 +250,9 @@ class NR7101:
             
                 n = 0
                 for msgtext in reversed(sms_dict.values()):
-                    obj["SMS_Text_"+str(n)] = msgtext[:254]  # Limit each message to 254 characters
+                    obj["SMS_"+str(n)+"_From"] = msg_sms[1]
+                    obj["SMS_"+str(n)+"_Time"] = msg_sms[2]
+                    obj["SMS_"+str(n)+"_Text"] = msg_sms[0][:254]  # Limit each message to 254 characters
                     n += 1
                     if n >= 10:  # Limit to the 10 most recent messages
                         break
@@ -357,7 +358,7 @@ class NR7101:
                 j = r.json()
 
             if oid == "cellwan_sms":
-                logger.warning(f"oid= {oid} - Dict: {j}")
+                logger.debug(f"oid= {oid} - Dict: {j}")
             
             if j.get("result") != "ZCFG_SUCCESS" or not j.get("Object"):
                 return None
